@@ -88,7 +88,7 @@
             <!--SEÇÃO 3: FUNCIONÁRIOS (Inicialmente escondida)-->
             <section id="sec-funcionarios" class="hidden space-y-4">
                 <h2 class="text-x1 front-bold text-gray-700">Cadastro de Funcionários</h2>
-                <form id="form-funcionario" class="bg-white p-4 rounded-lg shadow grid grid-cols-1 md:grid-cols-4 gap-3">
+                <form id="form-funcionario" onsubmit="salvarFuncionario(event)" class="bg-white p-4 rounded-lg shadow grid grid-cols-1 md:grid-cols-4 gap-3">
                     <input type="text" id="func-nome" placeholder="Nome Completo" required class="p-2 border rounded">
                     <input type="text" id="func-matricula" placeholder="Matrícula" required class="p-2 border rounded">
                     <input type="text" id="func-setor" placeholder="Setor" required class="p-2 border rounded">

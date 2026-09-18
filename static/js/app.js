@@ -148,3 +148,9 @@ async function deletarFuncionario(id) {
         alert("Erro ao excluir funcionário.");
     }
 }
+
+//executa o carregamento inicial quando o HTML for totalmente lido
+document.addEventListener('DOMContentLoaded', () => {
+    carregarTabelaFuncionarios();
+    carregarOpcoesSelects();
+});
