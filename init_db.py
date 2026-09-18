@@ -1,6 +1,6 @@
 import sqlite3
 
-conn = sqlite3.connect("cestas_basicas.br")
+conn = sqlite3.connect("cestas_basicas.db")
 cursor = conn.cursor()
 
 # Tabela de funcionários
@@ -14,10 +14,11 @@ setor TEXT)
 
 # Tabela de Competência
 cursor.execute(""" 
-CREATE TABLE IF NOT EXISTS competencia (
+CREATE TABLE IF NOT EXISTS competencias (
 id INTEGER PRIMARY KEY AUTOINCREMENT,
 mes INTEGER NOT NULL,
-ano INTEGER NOT NULL
+ano INTEGER NOT NULL,
+UNIQUE(mes, ano)
 )
 """)
 

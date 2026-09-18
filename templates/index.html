@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Controle de Cestas Básicas</title>
+        <!--Importação do Tailwind CSS via CDN-->
+        <script src="https://cdn.tailwindcss.com"></script>
+    </head>
+    <body class="bg-gray-100 min-h-screen text-gray-800">
+        <!-- 1. CABEÇALHO DO SISTEMA -->
+         <header class="bg-blue-700 text-white p-4 shadow-md">
+            <div class="max-w-6x1 max-auto flex justify-between items-center">
+                <h1 class="text-x1 front-bold">Gestão de Cestas Básicas</h1>
+                <span class="text-xs bg-blue-800 px-3 py-1 rounded-full">v1.0</span>
+            </div>
+         </header>
+         <!--2. MENU DE NAVEGAÇÃO POR ABAS -->
+         <nav class="bg-white border-b border-gray-200">
+            <div class="max-w-6x1 mx-auto flex overflow-x-auto">
+                <button onclick="mudarAba('entregas')" id="tab-entregas" class="px-6 py-3 front-semibold text-blue-600 border-b-2 border-blue-600 focus:outline-none">
+                    Entregas Pendentes
+                </button>
+                <button onclick="mudarAba ('frequencia')" id="tab-frequencia" class="px-6 py-3 front-semibold text-gray-500 hover:text-blue-600 focus:outline-none">
+                    Lançar Frequência
+                </button>
+                <button onclick="mudarAba ('funcionarios')" id="tab-funcionarios" class="px-6 py-3 front-semibold text-gray-500 hover:text-blue-600 focus:outline-none">
+                    Funcionários
+                </button>
+                <button onclick="mudarAba ('competencias')" id="tab-competencias" class="px-6 py-3 front-semibold text-gray-500 hover:text-blue-600 focus:outline-none">
+                    Competências
+                </button>
+            </div>
+         </nav>
+         <!--3. CONTEÚDO PRINCIPAL (SEÇÕES E ABAS)-->
+         <main class="max-w-6x1 mx-auto p-4">
+            <!--SEÇÃO 1: ENTREGAS PENDENTES (Visível por padrão)-->
+            <section id="sec-entregas" class="space-y-4">
+                <h2 class="text-x1 front-bold text-gray-700">Fila de Entrega de Cestas</h2>
+                <div class="bg-white rounded-lg shadow overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 border-b border-gray-200 text-gray-600 text-sm">
+                                <th class="p-3">Funcionário</th>
+                                <th class="p-3">Matrícula</th>
+                                <th class="p-3">Competência</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3 text-center">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-entregas" class="divide-y divide-gray-100 text-sm">
+                            <!--Os dados do banco serão inseridos aqui via JS-->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            <!--SEÇÃO 2: LANÇAR FREQUÊNCIA (Inicialmente escondida com hidden)-->
+            <section id="sec-frequencia" class="hidden max-w-lg mx-auto bg-white px-6 rounded-lg shadow space-y-4">
+                <h2 class="text-xl front-bold text-gray-700">Registrar Frequência Mensal</h2>
+                <form id="form-frequencia" class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium">Funcionário</label>
+                        <select id="freq-funcionario" class="w-full p-2 border rounded mt-1 bg-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium">Competência (Mês/Ano)</label>
+                        <select id="freq.competenica" required class="w-full p-2 border rounded mt-1 bg-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium">Dias Trabalhados</label>
+                        <input type="number" id="freq-dias" min="0" max="31" required class="w-full p-2 border rounded mt-1">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-sm font-medium">Faltas Justisficadas</label>
+                            <input type="number" id="freq-justificadas" min="0" value="0" class="w-full p-2 border rounded mt-1">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium">Faltas Injustificadas</label>
+                            <input type="number" id="frq-injustificadas" min="0" value="0" class="w-full p-2 border rounded mt-1">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 front-semibold">
+                        Salvar e Processar Elegibilidade
+                    </button>
+                </form>
+            </section>
+            <!--SEÇÃO 3: FUNCIONÁRIOS (Inicialmente escondida)-->
+            <section id="sec-funcionarios" class="hidden space-y-4">
+                <h2 class="text-x1 front-bold text-gray-700">Cadastro de Funcionários</h2>
+                <form id="form-funcionario" class="bg-white p-4 rounded-lg shadow grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <input type="text" id="func-nome" placeholder="Nome Completo" required class="p-2 border rounded">
+                    <input type="text" id="func-matricula" placeholder="Matrícula" required class="p-2 border rounded">
+                    <input type="text" id="func-setor" placeholder="Setor" required class="p-2 border rounded">
+                    <button type="submit" class="bg-green-600 text-white py-2 rounded hover:bg-green-700 front-semibold">Cadastrar</button>
+                </form>
+                <div class="bg-white rounded-lg shadow overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 border-b border-gray-200 text-gray-600 text-sm">
+                                <th class="p-3">ID</th>
+                                <th class="p-3">Nome</th>
+                                <th class="p-3">Matrícula</th>
+                                <th class="p-3">Setor</th>
+                                <th class="p-3">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-funcionarios" class="divide-y divide-gray-100 text-sm">
+                            <!--Dados dinâmicos aqui-->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            <!--SEÇÃO 4: COMPETÊNCIAS (Inicialmente escondida)-->
+            <section id="sec-competencias" class="hidden max-w-md mx-auto space-y-4">
+                <h2 class="text-xl front-bold text-gray-700">Nova Competência</h2>
+                <form id="form-competencia" onsubmit="salvarCompetencia(event)" class="bg-white p-4 rounded-lg shadow space-y-3">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-sm font-medium">Mês</label>
+                            <input type="number" id="comp-mes" min="1" max="12" placeholder="Ex: 5" required class="w-full p-2 border rounded mt-1">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium">Ano</label>
+                            <input type="number" id="comp-ano" min="2019" placeholder="Ex:2026" required class="w-full p-2 border rounded mt-1">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 front-semibold">Criar Competência</button>
+                </form>
+            </section>
+         </main>
+         <!--Importante: Importação do script JS da pasta static-->
+         <script src="/static/js/app.js"></script>
+    </body>
+</html>
