@@ -42,9 +42,11 @@ CREATE TABLE IF NOT EXISTS entregas (
 id INTEGER PRIMARY KEY AUTOINCREMENT,
 funcionario_id INTEGER NOT NULL,
 competencia_id INTEGER NOT NULL,
-status TEXT CHECK (status IN ('pendente', 'entregue', 'atrasada')) NOT NULL,
+status TEXT CHECK (status IN ('pendente', 'entregue', 'atrasada', 'inelegivel')) NOT NULL DEFAULT 'pendente',
+data_entrega TEXT,
+observacao TEXT,
 FOREIGN KEY (funcionario_id) REFERENCES funcionarios(id),
-FOREIGN KEY (competencia_id) REFERENCES competencia(id)) 
+FOREIGN KEY (competencia_id) REFERENCES competencias(id)) 
 """)
 
 # Trigger de elegibilidade

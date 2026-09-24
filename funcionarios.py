@@ -13,20 +13,20 @@ class FuncionarioShema(BaseModel):
 
 #Rota para cadastrar um funcionario com tratamento de erros
 @router.post("/funcionarios", status_code=status.HTTP_201_CREATED)
-def cadastrar_funcionario(func: FuncionarioShema):
+def cadastrar_funcionario(funcionario: FuncionarioShema):
     with get_db() as conn:
         cursor = conn.cursor()
         try:
             cursor.execute("""
                 INSERT INTO funcionarios (nome, matricula, setor)
-                VALEU (?, ?, ?)
-            """, (func.nome, func.matricula, func.setor))
+                VALUES (?, ?, ?)
+            """, (funcionario.nome, funcionario.matricula, funcionario.setor))
             conn.commit()
             return {"mensagem": "Funcionário cadastrado com sucesso!"}
         except sqlite3.IntegrityError:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"A matricula '{func.matricula}' já está cadastrada para outro funcionário"
+                detail=f"A matricula '{funcionario.matricula}' já está cadastrada para outro funcionário"
             )
         
  #Rota para listar todos os funcionários
@@ -56,15 +56,15 @@ def obter_funcionario(funcionario_id: int):
 
 #Atualiza o funcionario
 @router.put("/funcionario/{funcionario_id}")
-def atualizar_funcionario(funcionario_id: int, func: FuncionarioShema):
+def atualizar_funcionario(funcionario_id: int, funcionario: FuncionarioShema):
     with get_db() as conn:
         cursor = conn.cursor()
         try:
             cursor.execute("""
-                UPTADE funcionarios
+                UPDATE funcionarios
                 SET nome = ?, matricula = ?, setor = ?
                 WHERE id = ?
-            """, (func.nome, func.matricula, func.setor, funcionario_id))
+            """, (funcionario.nome, funcionario.matricula, funcionario.setor, funcionario_id))
             conn.commit()
 
             if cursor.rowcount == 0:
@@ -76,7 +76,7 @@ def atualizar_funcionario(funcionario_id: int, func: FuncionarioShema):
         except sqlite3.IntegrityError:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"Amatrícula '{func.matricula}' já pertence a outro funcionário."
+                detail=f"Amatrícula '{funcionario.matricula}' já pertence a outro funcionário."
             )
 
 #Deletar funcionário
@@ -85,7 +85,9 @@ def deletar_funcionario(funcionario_id: int):
     with get_db() as conn:
         cursor = conn.cursor()
         try:
-            cursor.execute("DELETE FROM funcionarios WHERE id = ?", (funcionario_id))
+            cursor.execute("DELETE FROM funcionarios WHERE id = ?", (funcionario_id,))
+            conn.commit()
+            
             if cursor.rowcount == 0:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,

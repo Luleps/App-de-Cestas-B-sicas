@@ -38,6 +38,17 @@ def registrar_frequencia(freq: FrequenciaSchema):
                 INSERT INTO frequencia (funcionario_id, competencia_id, dias_trabalhados, faltas_justificadas, faltas_injustificadas)
                 VALUES (?, ?, ?, ?, ?)  
                 """, (freq.funcionario_id, freq.competencia_id, freq.dias_trabalhados, freq.faltas_justificadas, freq.faltas_injustificadas))
+            
+            #Regra de elegibilidade: se trabalhou >= 15 dias e 0 faltas injustificadas
+            status_entrega = 'pendente' if (freq.dias_trabalhados >= 15 and freq.faltas_injustificadas == 0) else 'inelegivel'
+            #Gera ou atualiza o registro na tabela de entregas
+            cursor.execute("""
+                INSERT INTO entregas (funcionario_id, competencia_id, status)
+                VALUES (?, ?, ?)
+                ON CONFLICT(funcionario_id, competencia_id) DO UPDATE SET status = excluded.status
+                WHERE status != 'entregue' 
+                """, (freq.funcionario_id, freq.competencia_id, status_entrega))
+            
             conn.commit()
             return {"mensagem": "Frequência registrada e elegibilidade processada com sucesso!"}
         except sqlite3.IntegrityError:
@@ -51,19 +62,23 @@ def listar_frequencias(competencia_id: int = None):
     with get_db() as conn:
         cursor = conn.cursor()
         if competencia_id:
-            cursor.execute("SELECT * FROM frequencia WHERE competencia_id = ?", (competencia_id))
+            cursor.execute("SELECT * FROM frequencia WHERE competencia_id = ?", (competencia_id,))
         else:
-            cursor.execute("SELECT * FROM frequencia")
+            cursor.execute("""
+                SELECT f.*, func.nome as funcionario_nome, func.matricula
+                FROM frequencia f
+                JOIN funcionarios func ON f.funcionario_id = func.id 
+                """)
         return [dict(row) for row in cursor.fetchall()]
 
 #UPDATE
 @router.put("/frequencia/{frequencia_id}")
 def atualizar_frequencia(frequencia_id: int, freq_data: FrequenciaUpdateSchema):
-    with get_db as conn:
+    with get_db () as conn:
         cursor = conn.cursor()
 
         #1. Busca os dados atuais da frequência
-        cursor.execute("SELECT funcionario_id, competencia_id FROM frequencia WHERE id = ?", (frequencia_id))
+        cursor.execute("SELECT funcionario_id, competencia_id FROM frequencia WHERE id = ?", (frequencia_id,))
         frequencia_atual = cursor.fetchone()
         if not frequencia_atual:
             raise HTTPException(
@@ -72,12 +87,14 @@ def atualizar_frequencia(frequencia_id: int, freq_data: FrequenciaUpdateSchema):
             )
         func_id = frequencia_atual["funcionario_id"]
         comp_id = frequencia_atual["competencia_id"]
+
         #2. Atualiza a tabela frequencia
         cursor.execute("""
             UPDATE frequencia
             SET dias_trabalhados = ?, faltas_justificadas = ?, faltas_injustificadas = ?
             WHERE id = ?
         """, (freq_data.dias_trabalhados, freq_data.faltas_justificadas, freq_data.faltas_injustificadas, frequencia_id))
+
         #3. Recalcula e atualiza a elegibilidade na tabela entregas(caso nao tenha sido entregue ainda)
         novo_status = 'pendente' if (freq_data.dias_trabalhados >= 15 and freq_data.faltas_injustificadas == 0) else "inelegivel"
 
@@ -96,7 +113,7 @@ def deletar_frequencia(frequencia_id: int):
         cursor = conn.cursor()
 
         #Busca referências para remover também a entrega pendente correspondente
-        cursor.execute("SELECT funcionario_id, competencia_id FROM frequencia_id WHERE id = ?", (frequencia_id))
+        cursor.execute("SELECT funcionario_id, competencia_id FROM frequencia WHERE id = ?", (frequencia_id,))
         frequencia = cursor.fetchone()
         if not frequencia:
             raise HTTPException(
@@ -107,9 +124,9 @@ def deletar_frequencia(frequencia_id: int):
         cursor.execute("""
             DELETE FROM entregas
             WHERE funcionario_id = ? AND competencia_id = ? AND status != 'entregue'
-        """, (frequencia["funcionario_id,"], frequencia["competencia_id"]))
+        """, (frequencia["funcionario_id"], frequencia["competencia_id"]))
         #Remove a frequencia
-        cursor.execute("DELETE FROM frequencia WHERE id = ?", (frequencia_id))
+        cursor.execute("DELETE FROM frequencia WHERE id = ?", (frequencia_id,))
         conn.commit()
         return {"mensagem": "Registro de frequência e pendência de entrega associada foram removidos com sucesso!"}
     

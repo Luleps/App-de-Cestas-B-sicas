@@ -1,12 +1,22 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 from funcionarios import router as funcionarios_router
 from frequencia import router as frequencia_router
 from entregas import router as entregas_router
 from competencias import router as competencias_router
 
 app = FastAPI()
+
+# Permite requisições DELETE, PUT, POST e GET do frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 #1. Configura a pasta de arquivos estáticos (CSS/JS)
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -20,8 +30,8 @@ app.include_router(competencias_router)
 #3. Rota principal que carrega a página WEB no navegador
 @app.get("/", response_class=HTMLResponse)
 def pagina_inicial():
-    with open("templates/index.html", "r", encoding="utf-8") as f:
-        return f.read()
+    with open("templates/index.html", "r", encoding="utf-8") as arquivo:
+        return arquivo.read()
 
 
 
