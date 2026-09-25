@@ -29,7 +29,7 @@ def verificar_elegibilidade(dias_trabalhados: int, faltas_injustificadas: int) -
 
 #1. Obter status das entregas de uma competência
 @router.get("/entregas/status")
-def listar_status_entregas(competencia_id: int = Query, db: sqlite3.Connection = Depends(get_db)):
+def listar_status_entregas(competencia_id: int = Query(..., description="ID da competência"), db: sqlite3.Connection = Depends(get_db)):
     cursor = db.cursor()
 
     #Busca frequências registradas
@@ -38,7 +38,7 @@ def listar_status_entregas(competencia_id: int = Query, db: sqlite3.Connection =
             func.id AS funcionario_id,
             func.nome,
             func.matricula,
-            func.setor
+            func.setor,
             c.id AS competencia_id,
             c.mes,
             c.ano,
@@ -59,7 +59,7 @@ def listar_status_entregas(competencia_id: int = Query, db: sqlite3.Connection =
         GROUP BY func.id, c.id;
         """
     
-    cursor.execute(query, (competencia_id))
+    cursor.execute(query, (competencia_id,))
     registros = cursor.fetchall()
 
     resultado = []

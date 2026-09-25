@@ -371,7 +371,7 @@ async function carregarTabelaEntregas() {
 
         //2.valida se a resposta HTTP é OK antes de processar
         if (!res.ok) {
-            const erroApi = await res.json();
+            const erroApi = await res.text();
             console.error("Erro da API:", erroApi);
             tabela.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500 font-medium">Erro ao carregar os dados das entregas.</td></tr>`;
             return;
@@ -382,7 +382,7 @@ async function carregarTabelaEntregas() {
 
         //3.Garante que seja um Array
         if (!Array.isArray(lista) || lista.length === 0) {
-            tabela.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">Nenhum registro de frequência/entrega encontrado.</td></td>`;
+            tabela.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">Nenhum registro de frequência/entrega encontrado.</td></tr>`;
             return;
         }
 
@@ -397,11 +397,11 @@ async function carregarTabelaEntregas() {
 
             //envia o funcionario_id e o compId selecionado
             const botaoAcao = item.elegivel && !item.entregue
-                ? `<button onclick="confirmarEntrega(${item.funcionario_id}, ${item.frequencia_id})" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 rounded shadow">Baixar Entrega</button>`
+                ? `<button onclick="confirmarEntrega(${item.funcionario_id}, ${compId})" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 rounded shadow">Baixar Entrega</button>`
                 : (item.entregue ? `<span class="text-xs text-gray-400">Concluído</span>` : `<span class="text-xs text-gray-400">Inapto</span>`);
             
             tabela.innerHTML += `
-            <tr class="hover: bg-gray-50 border-b">
+            <tr class="hover:bg-gray-50 border-b">
                 <td class="p-3 font-medium">${item.nome} (${item.matricula})</td>
                 <td class="p-3 text-center">${item.competencia}</td>
                 <td class="p-3 text-center">${badgeElegivel}</td>
