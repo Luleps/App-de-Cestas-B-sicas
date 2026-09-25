@@ -24,15 +24,55 @@ function mudarAba(abaSelecionada) {
 //==================================================================
 //2. Módulo de Competências
 //==================================================================
+let competenciaSelecionadaId = null;
 async function carregarCompetencias() {
     try {
         const resposta = await fetch('/competencias');
         const competencias = await resposta.json();
         console.log("Competências carregadas:", competencias);
+
+        const selectCompetencia = document.getElementById('select-competencia');
+        if (!selectCompetencia) return;
+
+        selectCompetencia.innerHTML = '<option value="">Selecione uma competência...</option>';
+
+        competencias.forEach(comp => {
+            const option = document.createElement('option');
+            option.value = comp.id;
+            //formata o mes com 0 a esquerda ex: 05/2026
+            const mesFormatado = String(comp.mes).padStart(2, '0');
+            option.textContent = `${mesFormatado}/${comp.ano}`;
+            selectCompetencia.appendChild(option);
+        });
+
+        //Seleciona automaticamente a última competência cadastrada, se houver
+        if (competencias.length > 0) {
+            const ultimaCompetencia = competencias[competencias.length - 1];
+            selectCompetencia.value = ultimaCompetencia.id;
+            competenciaSelecionadaId = ultimaCompetencia.id;
+
+            //atualiza a tabela de status de entregas com a competencia padrao
+            if (typeof carregarStatusEntregas === 'function') {
+                carregarStatusEntregas(competenciaSelecionadaId);
+            }
+        }
     } catch (erro) {
         console.error("Erro ao carregar competências:", erro);
     }    
 }
+
+//listenet para disparar busca quando o usuário mudar a competencia no <select>
+document.addEventListener('DOMContentLoaded', () => {
+    const selectCompetencia = document.getElementById('select-competencia');
+    if (selectCompetencia) {
+        selectCompetencia.addEventListener('change', (e) => {
+            competenciaSelecionadaId = e.target.value;
+            if (competenciaSelecionadaId && typeof carregarStatusEntregas === 'function') {
+                carregarStatusEntregas(competenciaSelecionadaId);
+            }
+        });
+    }
+});
 
 async function salvarCompetencia(event) {
     event.preventDefault();
@@ -44,6 +84,7 @@ async function salvarCompetencia(event) {
         mes: mesDigitado,
         ano: anoDigitado
     };
+
     try {
         const resposta = await fetch('/competencias', {
             method: 'POST',
@@ -56,6 +97,8 @@ async function salvarCompetencia(event) {
         if (resposta.ok) {
             alert("Competência cadastrada com sucesso!");
             document.getElementById('form-competencia').reset();
+            //recarrega o combo de competencias para exibir a recem-criada
+            await carregarCompetencias();
         } else {
             const erro = await resposta.json();
             alert(`Erro: ${erro.detail}`);
@@ -273,35 +316,73 @@ async function deletarFrequencia(id) {
 //Carregar seletor de competências da aba de entregas
 async function carregarFiltroCompetenciasEntregas() {
     try {
-        const res = await fetch('competencias');
-        const competencias = await res.json();
+        const res = await fetch('/competencias');
+        if(!res.ok) return;
 
+        const competencias = await res.json();
         const select = document.getElementById('filtro-entrega-competencia');
         if (!select) return;
 
-        select.innerHTML = '<option value= "">Todas as Competências</option>';
+        select.innerHTML = '<option value= "">Selecione uma Competência...</option>';
+
         competencias.forEach(c => {
-            select.innerHTML += `<option value="${c.id}">${String(c.mes).padStart(2, '0')}</option>`;
+            const mesZero = String(c.mes).padStart(2, '0');
+            select.innerHTML += `<option value="${c.id}">${mesZero}/${c.ano}</option>`;
         });
+
+        //Seleciona automaticamente a última competência cadastrada
+        if (competencias.length > 0) {
+            const ultimaComp = competencias[competencias.length - 1];
+            select.value = ultimaComp.id;
+
+            //Carrega os dados da tabela para essa competencia automaticamente
+            carregarTabelaEntregas();
+        }
     } catch (erro) {
         console.error("Erro ao carregar filtro de competências:", erro);
     }
 }
 
+//Evento para atualizar a tabela sempre que o utilizador alterar a competencia no menu suspenso
+document.addEventListener('DOMContentLoaded', () => {
+    carregarFiltroCompetenciasEntregas();
+
+    const select = document.getElementById('filtro-entrega-competencia');
+    if (select) {
+        select.addEventListener('change', carregarTabelaEntregas);
+    }
+});
+
 //Busca e exibe a lista de entregas / elegibilidade
 async function carregarTabelaEntregas() {
-    const compId = document.getElementById('filtro-entrega-competencia')?.value || '';
-    const url = compId ? `/entregas/status?competencia_id=${compId}` : 'entregas/status';
+    const selectComp = document.getElementById('filtro-entrega-competencia');
+    const compId = selectComp?.value || '';
+    const tabela = document.getElementById('tabela-entregas');
+    if (!tabela) return;
+
+    //1.Impede a chamada se nenhuma competência estiver selecionada
+    if (!compId) {
+        tabela.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">Selecione uma competência acima para visualizar o status das entregas.</td></tr>`;
+        return;
+    }
 
     try {
-        const res = await fetch(url);
-        const lista = await res.json();
+        const res = await fetch(`/entregas/status?competencia_id=${compId}`);
 
-        const tabela = document.getElementById('tabela-entregas');
-        if (!tabela) return;
+        //2.valida se a resposta HTTP é OK antes de processar
+        if (!res.ok) {
+            const erroApi = await res.json();
+            console.error("Erro da API:", erroApi);
+            tabela.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500 font-medium">Erro ao carregar os dados das entregas.</td></tr>`;
+            return;
+        }
+
+        const lista = await res.json();
         tabela.innerHTML = '';
-        if (lista.length === 0) {
-            tabela.innerHTML = `<tr><td colspan= "6" class="p-4 text-center text-gray-500">Nenhum registro de frequência/entrega encontrado.</td></tr>`;
+
+        //3.Garante que seja um Array
+        if (!Array.isArray(lista) || lista.length === 0) {
+            tabela.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">Nenhum registro de frequência/entrega encontrado.</td></td>`;
             return;
         }
 
@@ -314,6 +395,7 @@ async function carregarTabelaEntregas() {
                 ? `<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded font-semibold">Entregue</span>`
                 : `<span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded font-semibold">Pendentes</span>`;
 
+            //envia o funcionario_id e o compId selecionado
             const botaoAcao = item.elegivel && !item.entregue
                 ? `<button onclick="confirmarEntrega(${item.funcionario_id}, ${item.frequencia_id})" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 rounded shadow">Baixar Entrega</button>`
                 : (item.entregue ? `<span class="text-xs text-gray-400">Concluído</span>` : `<span class="text-xs text-gray-400">Inapto</span>`);
@@ -331,6 +413,7 @@ async function carregarTabelaEntregas() {
         });
     } catch (erro) {
         console.error("Erro ao carregar entregas:", erro);
+        tabela.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500 font-medium">Erro na comunicação com o servidor.</td></tr>`;
     }
 }
 
@@ -351,7 +434,7 @@ async function confirmarEntrega(funcionarioId, competenciaId) {
 
         const dados = await res.json();
         if (res.ok) {
-            alert(dados.mensagem);
+            alert(dados.mensagem || "Entrega registrada com sucesso!");
             carregarTabelaEntregas();
         } else {
             alert(`Erro: ${dados.detail}`);

@@ -1,6 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Optional
 from datetime import datetime
 import sqlite3
 from database import get_db
@@ -19,68 +19,70 @@ def verificar_elegibilidade(dias_trabalhados: int, faltas_injustificadas: int) -
     """
     Regra Padrão:
     - Minímo de 15 dias trabalhados na competência
-    - No máximo 0 faltas injustificadas
-    (Ajuste esses valores conforme regra da empresa)
+    - No máximo 0 faltas injustificadas    
     """
     if faltas_injustificadas > 0:
         return False, f"Inelegível ({faltas_injustificadas} falta(s) injustificada(s))"
     if dias_trabalhados < 15:
         return False, f"Inelegível ({dias_trabalhados} dias trabalhados - mín. 15)"
     return True, "Elegível"
+
 #1. Obter status das entregas de uma competência
 @router.get("/entregas/status")
-def listar_status_entregas(competencia_id: Optional[int] = None, db: sqlite3.Connection = Depends(get_db)):
+def listar_status_entregas(competencia_id: int = Query, db: sqlite3.Connection = Depends(get_db)):
     cursor = db.cursor()
 
     #Busca frequências registradas
     query = """
-        SELECT
-            f.id as frequencia_id,
-            func.id as funcionario_id,
+        SELECT            
+            func.id AS funcionario_id,
             func.nome,
             func.matricula,
-            func.setor,
-            c.id as competencia_id,
+            func.setor
+            c.id AS competencia_id,
             c.mes,
             c.ano,
-            f.dias_trabalhados,
-            f.faltas_justificadas,
-            f.faltas_injustificadas,
-            e.id as entrega_id,
-            e.entregue,
-            e.data_entrega,
-            e.observacao
-        FROM frequencia f
-        JOIN funcionarios func ON f.funcionario_id = func.id
-        JOIN competencias c ON f.competencia_id = c.id
-        LEFT JOIN entregas e ON e.funcionario_id = func.id AND e.competencia_id = c.id
+            COUNT(f.id) AS dias_trabalhados,
+            e.id AS entrega_id,
+            COALESCE(e.entregue, 0) AS entregue,
+            e.data_entrega
+        FROM funcionarios func
+        CROSS JOIN competencias c
+        LEFT JOIN frequencia f
+            ON f.funcionario_id = func.id
+            AND strftime('%m', f.data) = printf('%02d', c.mes)
+            AND strftime('%Y', f.data) = CAST(c.ano AS TEXT)
+        LEFT JOIN entregas e
+            ON e.funcionario_id = func.id
+            AND e.competencia_id = c.id
+        WHERE c.id = ? -- Passe o id da competencia desejada via parametro
+        GROUP BY func.id, c.id;
         """
-    params = []
-    if competencia_id:
-        query += " WHERE f.competencia_id = ?"
-        params.append(competencia_id)
-
-    cursor.execute(query, params)
+    
+    cursor.execute(query, (competencia_id))
     registros = cursor.fetchall()
 
     resultado = []
     for r in registros:
-        elegivel, motivo = verificar_elegibilidade(r["dias_trabalhados"], r["faltas_injustificadas"])
+        # Se sua regra não calcula faltas injustificadas na query, passe 0
+        faltas_inj = 0 
+        elegivel, motivo = verificar_elegibilidade(r["dias_trabalhados"], faltas_inj)
+
         resultado.append({
-            "frequencia_id": r["frequencia_id"],
+            "entrega_id": r["entrega_id"],
             "funcionario_id": r["funcionario_id"],
             "nome": r["nome"],
             "matricula": r["matricula"],
             "setor": r["setor"],
             "competencia": f"{r['mes']:02d}/{r['ano']}",
-            "dias_trabalhados": r["dias trabalhados"],
-            "faltas_injustificadas": r["faltas_injustificadas"],
+            "dias_trabalhados": r["dias_trabalhados"],
+            "faltas_injustificadas": faltas_inj,
             "elegivel": elegivel,
             "motivo_elegibilidade": motivo,
-            "entregue": bool(r["Entregue"]) if r["entregue"] is not None else False,
-            "data_entrega": r["data_entrega"],
-            "observacao": r["observacao"]
+            "entregue": bool(r["entregue"]),
+            "data_entrega": r["data_entrega"]
         })
+        
     return resultado
 
 #2. Registrar ou atualizar entrega

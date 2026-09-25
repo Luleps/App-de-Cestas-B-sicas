@@ -1,5 +1,5 @@
 import sqlite3
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, Field
 from database import get_db
 
@@ -11,15 +11,14 @@ class CompetenciaSchema(BaseModel):
 
 #CREATE
 @router.post("/competencias", status_code=status.HTTP_201_CREATED)
-def criar_competencia(comp: CompetenciaSchema):
-    with get_db() as conn:
-        cursor = conn.cursor()
+def criar_competencia(comp: CompetenciaSchema, db: sqlite3.Connection = Depends(get_db)):    
+        cursor = db.cursor()
         try:
             cursor.execute("""
             INSERT INTO competencias (mes, ano)
             VALUES (?, ?)
             """, (comp.mes, comp.ano))
-            conn.commit()
+            db.commit()
             return {"mensagem":f"Competência {comp.mes:02d}/{comp.ano} criada com sucesso!"}
         except sqlite3.IntegrityError:
             raise HTTPException(
@@ -29,8 +28,7 @@ def criar_competencia(comp: CompetenciaSchema):
 
 #READ ALL
 @router.get("/competencias")
-def listar_competencias():
-    with get_db() as conn:
-        cursor = conn.cursor()
+def listar_competencias(db: sqlite3.Connection = Depends(get_db)):    
+        cursor = db.cursor()
         cursor.execute("SELECT * FROM competencias ORDER BY ano DESC, mes DESC")
         return [dict(row) for row in cursor.fetchall()]

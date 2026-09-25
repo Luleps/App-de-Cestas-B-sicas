@@ -1,5 +1,5 @@
 import sqlite3
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, Field
 from database import get_db
 
@@ -20,12 +20,11 @@ class FrequenciaUpdateSchema(BaseModel):
 
 #Create
 @router.post("/frequencia", status_code=status.HTTP_201_CREATED)
-def registrar_frequencia(freq: FrequenciaSchema):
-    with get_db() as conn:
-        cursor = conn.cursor()
+def registrar_frequencia(freq: FrequenciaSchema, db: sqlite3.Connection = Depends(get_db)):    
+        cursor = db.cursor()
 
         #1. Valida se o funcionário realmente existe
-        cursor.execute("SELECT id FROM funcionario WHERE id = ?", (freq.funcionario_id,))
+        cursor.execute("SELECT id FROM funcionarios WHERE id = ?", (freq.funcionario_id,))
         if not cursor.fetchone():
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -41,26 +40,28 @@ def registrar_frequencia(freq: FrequenciaSchema):
             
             #Regra de elegibilidade: se trabalhou >= 15 dias e 0 faltas injustificadas
             status_entrega = 'pendente' if (freq.dias_trabalhados >= 15 and freq.faltas_injustificadas == 0) else 'inelegivel'
+
             #Gera ou atualiza o registro na tabela de entregas
             cursor.execute("""
                 INSERT INTO entregas (funcionario_id, competencia_id, status)
                 VALUES (?, ?, ?)
-                ON CONFLICT(funcionario_id, competencia_id) DO UPDATE SET status = excluded.status
+                ON CONFLICT(funcionario_id, competencia_id) DO UPDATE SET 
+                    status = excluded.status
                 WHERE status != 'entregue' 
                 """, (freq.funcionario_id, freq.competencia_id, status_entrega))
             
-            conn.commit()
+            db.commit()
             return {"mensagem": "Frequência registrada e elegibilidade processada com sucesso!"}
         except sqlite3.IntegrityError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="A frequência deste funcionário já foi registrada para esta competência"
             )
-#Consulta tudo e filtra por competencia
+        
+#READ (Consulta tudo e filtra por competencia)
 @router.get("/frequencia")
-def listar_frequencias(competencia_id: int = None):
-    with get_db() as conn:
-        cursor = conn.cursor()
+def listar_frequencias(competencia_id: int = None, db: sqlite3.Connection = Depends(get_db)):    
+        cursor = db.cursor()
         if competencia_id:
             cursor.execute("SELECT * FROM frequencia WHERE competencia_id = ?", (competencia_id,))
         else:
@@ -73,9 +74,8 @@ def listar_frequencias(competencia_id: int = None):
 
 #UPDATE
 @router.put("/frequencia/{frequencia_id}")
-def atualizar_frequencia(frequencia_id: int, freq_data: FrequenciaUpdateSchema):
-    with get_db () as conn:
-        cursor = conn.cursor()
+def atualizar_frequencia(frequencia_id: int, freq_data: FrequenciaUpdateSchema, db: sqlite3.Connection = Depends(get_db)):    
+        cursor = db.cursor()
 
         #1. Busca os dados atuais da frequência
         cursor.execute("SELECT funcionario_id, competencia_id FROM frequencia WHERE id = ?", (frequencia_id,))
@@ -85,6 +85,7 @@ def atualizar_frequencia(frequencia_id: int, freq_data: FrequenciaUpdateSchema):
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Registro de frequencia ID {frequencia_id} não encontrado."
             )
+        row = dict(frequencia_atual)
         func_id = frequencia_atual["funcionario_id"]
         comp_id = frequencia_atual["competencia_id"]
 
@@ -103,14 +104,14 @@ def atualizar_frequencia(frequencia_id: int, freq_data: FrequenciaUpdateSchema):
             SET status = ?
             WHERE funcionario_id = ? AND competencia_id = ? AND status != 'entregue'
         """, (novo_status, func_id, comp_id))
-        conn.commit()
+
+        db.commit()
         return {"mensagem": "Frequência e elegibilidade atualizadas com sucesso!"}
 
 #DELETE
 @router.delete("/frequencia/{frequencia_id}")
-def deletar_frequencia(frequencia_id: int):
-    with get_db as conn:
-        cursor = conn.cursor()
+def deletar_frequencia(frequencia_id: int, db: sqlite3.Connection = Depends(get_db)):    
+        cursor = db.cursor()
 
         #Busca referências para remover também a entrega pendente correspondente
         cursor.execute("SELECT funcionario_id, competencia_id FROM frequencia WHERE id = ?", (frequencia_id,))
@@ -120,13 +121,16 @@ def deletar_frequencia(frequencia_id: int):
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Registro de frequência ID {frequencia_id} não encontrado."
             )
+        row = dict(frequencia)
+
         #Remove a entrega gerada (somente se ainda estiver como pendente/inelegivel)
         cursor.execute("""
             DELETE FROM entregas
             WHERE funcionario_id = ? AND competencia_id = ? AND status != 'entregue'
-        """, (frequencia["funcionario_id"], frequencia["competencia_id"]))
+        """, (row["funcionario_id"], frequencia["competencia_id"]))
+
         #Remove a frequencia
         cursor.execute("DELETE FROM frequencia WHERE id = ?", (frequencia_id,))
-        conn.commit()
+        db.commit()
         return {"mensagem": "Registro de frequência e pendência de entrega associada foram removidos com sucesso!"}
     

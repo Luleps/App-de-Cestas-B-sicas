@@ -10,14 +10,14 @@
     <body class="bg-gray-100 min-h-screen text-gray-800">
         <!-- 1. CABEÇALHO DO SISTEMA -->
          <header class="bg-blue-700 text-white p-4 shadow-md">
-            <div class="max-w-6x1 max-auto flex justify-between items-center">
-                <h1 class="text-x1 front-bold">Gestão de Cestas Básicas</h1>
+            <div class="max-w-6xl max-auto flex justify-between items-center">
+                <h1 class="text-xl front-bold">Gestão de Cestas Básicas</h1>
                 <span class="text-xs bg-blue-800 px-3 py-1 rounded-full">v1.0</span>
             </div>
          </header>
          <!--2. MENU DE NAVEGAÇÃO POR ABAS -->
          <nav class="bg-white border-b border-gray-200">
-            <div class="max-w-6x1 mx-auto flex overflow-x-auto">
+            <div class="max-w-6xl mx-auto flex overflow-x-auto">
                 <button onclick="mudarAba('entregas')" id="tab-entregas" class="px-6 py-3 front-semibold text-blue-600 border-b-2 border-blue-600 focus:outline-none">
                     Entregas Pendentes
                 </button>
@@ -33,10 +33,22 @@
             </div>
          </nav>
          <!--3. CONTEÚDO PRINCIPAL (SEÇÕES E ABAS)-->
-         <main class="max-w-6x1 mx-auto p-4">
+         <main class="max-w-6xl mx-auto p-4">
             <!--SEÇÃO 1: ENTREGAS PENDENTES (Visível por padrão)-->
             <section id="sec-entregas" class="space-y-4">
-                <h2 class="text-x1 front-bold text-gray-700">Fila de Entrega de Cestas</h2>
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <h2 class="text-xl front-bold text-gray-700">Fila de Entrega de Cestas</h2>
+                    <!-- Filtro de competencia necessario para o JS -->
+                     <div class="flex items-center gap-2">
+                        <label for="filtro-entrega-competencia" class="text-sm font-medium text-gray-600 whitespace-nowrap">
+                            Competência:
+                        </label>
+                        <select id="filtro-entrega-competencia" class="border border-gray-300 rounded-lg p-2 text-sm bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none min-w-[200px]">
+                            <!-- Opções serão preenchidas via JS -->
+                        </select>
+                     </div>
+                </div>
+                
                 <div class="bg-white rounded-lg shadow overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead>
@@ -87,7 +99,7 @@
             </section>
             <!--SEÇÃO 3: FUNCIONÁRIOS (Inicialmente escondida)-->
             <section id="sec-funcionarios" class="hidden space-y-4">
-                <h2 class="text-x1 front-bold text-gray-700">Cadastro de Funcionários</h2>
+                <h2 class="text-xl front-bold text-gray-700">Cadastro de Funcionários</h2>
                 <form id="form-funcionario" onsubmit="salvarFuncionario(event)" class="bg-white p-4 rounded-lg shadow grid grid-cols-1 md:grid-cols-4 gap-3">
                     <input type="text" id="func-nome" placeholder="Nome Completo" required class="p-2 border rounded">
                     <input type="text" id="func-matricula" placeholder="Matrícula" required class="p-2 border rounded">
