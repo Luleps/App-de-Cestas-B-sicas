@@ -7,12 +7,23 @@ def init_db():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
+    # Garante suporte a chaves estrangeiras durante a criação
+    cursor.execute("PRAGMA foreign_keys = ON;")
+    
     cursor.executescript("""
+    CREATE TABLE IF NOT EXISTS usuarios (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        senha TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS funcionarios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nome TEXT NOT NULL,
         matricula TEXT UNIQUE NOT NULL,
-        setor TEXT
+        setor TEXT,
+        usuario_id INTEGER,
+        FOREIGN KEY (usuario_id) REFERENCES usuario (id)
     );
 
     CREATE TABLE IF NOT EXISTS competencias (

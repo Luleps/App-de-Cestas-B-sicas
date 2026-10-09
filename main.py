@@ -9,6 +9,7 @@ from frequencia import router as frequencia_router
 from entregas import router as entregas_router
 from competencias import router as competencias_router
 from database import init_db
+import auth
 
 #Garante a inicialização do banco ao ligar a API
 @asynccontextmanager
@@ -36,6 +37,7 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 #2. Inclui os endpoints da API
+app.include_router(auth.router)
 app.include_router(funcionarios_router, tags=["Funcionários"])
 app.include_router(frequencia_router, tags=["Frequência"])
 app.include_router(entregas_router, tags=["Entregas"])
